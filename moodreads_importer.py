@@ -214,6 +214,22 @@ META_KEY_MAP: dict[str, str] = {
     "Publication Year": "publication_year",
     "Suspense Level": "suspense_level",
     "Atmospheric vs Jump Scares": "atmospheric_vs_jump_scares",
+    "Content/Trigger Warnings": "content_trigger_warnings",
+    "Spice / Adult Themes": "spice_adult_themes",
+    "When/Where to Read": "when_where_to_read",
+    "Skimmability / Density": "skimmability_density",
+    "Steam vs Fade-to-Black": "steam_vs_fade_to_black",
+    "HEA vs HFN": "hea_vs_hfn",
+    "Gore/Violence Level": "gore_violence_level",
+    "Emotional Safety Level": "emotional_safety_level",
+    "Best For Reader Type": "best_for_reader_type",
+    "Who Should Avoid": "who_should_avoid",
+    "Audiobook Available?": "audiobook_available",
+    "Coming-of-Age": "coming_of_age",
+    "Sci-Fi Sub-genre": "sci_fi_sub_genre",
+    "Sci-Fi Tone": "sci_fi_tone",
+    "Hard vs Soft Sci-Fi": "hard_vs_soft_sci_fi",
+    "World-Building Depth": "world_building_depth",
     # Nonfiction property mappings
     "Nonfiction Category / Type": "nonfiction_category",
     "Academic Rigor": "academic_rigor",
@@ -231,35 +247,46 @@ METADATA_PROMPT_TEMPLATE = """
 You are an expert librarian and story analyst. You assign metadata to
 books for a vibes-based TBR database. Only use the allowed tags below.
 Do not invent new labels or paraphrase existing ones. If no tag applies
-for a field, output an empty list [].
+for a field, output an empty list [] for arrays or null for single values.
 
 Allowed tags by key:
 {allowed_text}
 
-For the following book, output a single JSON object with keys:
-  mood, tone, setting_type, aesthetic, themes, tropes_general,
-  tropes_romance, romantasy_creature, spice_adult_themes,
-  pacing, energy_required, spice_level, vibes, when_where_to_read,
-  time_of_year, hard_vs_soft_sci_fi, investigation_type,
-  world_building_depth, character_archetypes, monster_threat,
-  character_count, pov, chapter_length_feel, romance_subplot,
-  skimmability_density, emotional_impact, emotional_arc_curve,
-  tech_level, gore_violence_level, twist_factor, emotional_color,
-  mystery_type, hea_vs_hfn, standalone_vs_series, suspense_level,
-  sci_fi_tone, magic_system_complexity, writing_style,
-  historical_event_focus, historical_accuracy,
-  sci_fi_sub_genre, fantasy_sub_genre, romance_sub_genre,
-  audiobook_vibe_tags, audiobook_format, audiobook_characterization_style,
-  audiobook_best_use, audiobook_available, coming_of_age,
-  found_family, social_commentary, character_study, emotional_weight,
-  magic_system_flavor, technical_complexity, age_appropriateness,
-  historical_era, time_period, themes_secondary, scare_type,
-  horror_intensity, atmospheric_vs_jump_scares, seasonality,
-  nonfiction_category, academic_rigor, research_intensity,
-  author_lens, reader_goal, cognitive_load, political_weight,
-  controversial_topic, teaching_style
+For the following book, output a single JSON object with these keys:
 
-Return JSON only. Do not wrap in markdown fences. Use concise lists.
+MULTI-SELECT (return as arrays):
+  genre, mood, tone, themes, aesthetic, setting_type, tropes_general,
+  tropes_romance, romantasy_creature, spice_adult_themes,
+  content_trigger_warnings, representation, when_where_to_read,
+  time_of_year, sci_fi_sub_genre, fantasy_sub_genre, romance_sub_genre,
+  audiobook_vibe_tags, audiobook_format, audiobook_characterization_style,
+  scare_type, nonfiction_category, author_lens, reader_goal,
+  controversial_topic
+
+SELECT (return as single string or null):
+  pacing, energy_required, spice_level, emotional_impact, emotional_weight,
+  emotional_arc_curve, emotional_color, emotional_safety_level,
+  character_count, character_archetypes, pov, chapter_length_feel,
+  romance_subplot, standalone_vs_series, series_status,
+  world_building_depth, magic_system_complexity, tech_level,
+  hard_vs_soft_sci_fi, sci_fi_tone, writing_style, suspense_level,
+  twist_factor, mystery_type, investigation_type, monster_threat,
+  gore_violence_level, horror_intensity, atmospheric_vs_jump_scares,
+  hea_vs_hfn, steam_vs_fade_to_black, ending_type,
+  historical_event_focus, historical_accuracy, time_period,
+  age_appropriateness, technical_complexity, skimmability_density,
+  academic_rigor, research_intensity, cognitive_load, political_weight,
+  teaching_style
+
+CHECKBOX (return as true/false):
+  audiobook_available, coming_of_age, found_family,
+  social_commentary, character_study
+
+TEXT (return as string):
+  vibes, audiobook_best_use, best_for_reader_type, who_should_avoid,
+  magic_system_flavor, description
+
+Return JSON only. Do not wrap in markdown fences.
 
 Book Title: {title}
 Author: {author}
