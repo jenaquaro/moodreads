@@ -429,7 +429,7 @@ def coerce_multi(value: Any) -> list[str]:
     return [str(value).strip()] if str(value).strip() else []
 
 
-def build_meta_key(property_name: str) -> str:
+def build_meta_key(property_name: str | None) -> str:
     """Derive a metadata key from a Notion property name.
 
     Converts spaces and punctuation to underscores and lowercases the result.
@@ -440,6 +440,9 @@ def build_meta_key(property_name: str) -> str:
     Returns:
         A snake_case key suitable for metadata dictionary lookup.
     """
+    if not property_name:
+        return ""
+
     if property_name in META_KEY_MAP:
         return META_KEY_MAP[property_name]
 
@@ -488,7 +491,12 @@ def load_allowed_tags(path: str) -> dict[str, list[str]]:
                 return allowed
 
             for col, val in row.items():
+                # Skip empty column names (can happen with trailing commas in CSV)
+                if not col:
+                    continue
                 key = build_meta_key(col)
+                if not key:
+                    continue
                 if val:
                     allowed[key] = [v.strip() for v in val.split(";") if v.strip()]
                 else:
