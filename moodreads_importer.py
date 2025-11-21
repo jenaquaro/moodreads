@@ -515,7 +515,46 @@ def load_allowed_tags(path: str) -> dict[str, list[str]]:
 # -----------------------------------------------------------------------------
 
 
-def fetch_cover_image(title: str, author: str, api_key: str | None) -> str | None:
+def fetch_cover_from_openlibrary(isbn: str) -> str | None:
+    """Fetch a cover image URL from Open Library using ISBN.
+
+    Open Library provides free book covers. This checks if a cover exists
+    for the given ISBN and returns the URL if found.
+
+    Args:
+        isbn: ISBN-10 or ISBN-13 of the book.
+
+    Returns:
+        URL of a cover image, or None if not found.
+    """
+    if not isbn:
+        return None
+
+    # Clean ISBN (remove dashes, spaces)
+    clean_isbn = isbn.replace("-", "").replace(" ", "").strip()
+    if not clean_isbn:
+        return None
+
+    # Open Library cover URL format - use large size
+    cover_url = f"https://covers.openlibrary.org/b/isbn/{clean_isbn}-L.jpg"
+
+    session = get_http_session()
+
+    try:
+        # HEAD request to check if cover exists (returns 1x1 pixel if not found)
+        response = session.head(cover_url, timeout=10, allow_redirects=True)
+        if response.status_code == 200:
+            # Check content-length to ensure it's not the 1x1 placeholder
+            content_length = response.headers.get("Content-Length", "0")
+            if int(content_length) > 1000:  # Real covers are much larger
+                return cover_url
+    except (requests.exceptions.RequestException, ValueError):
+        pass
+
+    return None
+
+
+def fetch_cover_from_brave(title: str, author: str, api_key: str) -> str | None:
     """Fetch a cover image URL using the Brave search API.
 
     Queries the Brave image search endpoint for '{title} {author} book cover'
@@ -524,14 +563,11 @@ def fetch_cover_image(title: str, author: str, api_key: str | None) -> str | Non
     Args:
         title: Book title.
         author: Book author.
-        api_key: Brave API key. If None or empty, returns None.
+        api_key: Brave API key.
 
     Returns:
         URL of a cover image, or None if not found.
     """
-    if not api_key:
-        return None
-
     query = f"{title} {author} book cover"
     headers = {
         "Accept": "application/json",
@@ -567,6 +603,40 @@ def fetch_cover_image(title: str, author: str, api_key: str | None) -> str | Non
             continue
         if url.lower().endswith(valid_extensions):
             return url
+
+    return None
+
+
+def fetch_cover_image(
+    title: str,
+    author: str,
+    isbn: str | None = None,
+    brave_api_key: str | None = None,
+) -> str | None:
+    """Fetch a cover image URL, trying Open Library first, then Brave.
+
+    Args:
+        title: Book title.
+        author: Book author.
+        isbn: ISBN-10 or ISBN-13 (optional, for Open Library lookup).
+        brave_api_key: Brave API key (optional, for fallback search).
+
+    Returns:
+        URL of a cover image, or None if not found.
+    """
+    # Try Open Library first (free, no API key needed)
+    if isbn:
+        cover_url = fetch_cover_from_openlibrary(isbn)
+        if cover_url:
+            logger.debug("  Cover found via Open Library")
+            return cover_url
+
+    # Fall back to Brave search
+    if brave_api_key:
+        cover_url = fetch_cover_from_brave(title, author, brave_api_key)
+        if cover_url:
+            logger.debug("  Cover found via Brave Search")
+            return cover_url
 
     return None
 
@@ -1019,10 +1089,12 @@ def main() -> int:
         # Prepare description: use My Review if present, otherwise empty
         description = (row.get("My Review") or "").strip()
 
-        # Fetch cover image
+        # Fetch cover image (try Open Library first via ISBN, then Brave)
         cover_url = None
-        if brave_key:
-            cover_url = fetch_cover_image(title, author, brave_key)
+        if not args.no_cover:
+            # Get ISBN from Goodreads export (try ISBN13 first, then ISBN)
+            isbn = (row.get("ISBN13") or row.get("ISBN") or "").strip().strip('="')
+            cover_url = fetch_cover_image(title, author, isbn=isbn, brave_api_key=brave_key)
             if cover_url:
                 logger.debug("  Cover image found")
             else:
