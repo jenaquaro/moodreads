@@ -626,7 +626,9 @@ def generate_book_metadata(
     payload = {
         "model": model,
         "messages": messages,
-        "temperature": 0.3,
+        "temperature": 0.7,
+        "max_tokens": 2000,
+        "response_format": {"type": "json_object"},
     }
 
     session = get_http_session()
